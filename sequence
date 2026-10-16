@@ -1,0 +1,74 @@
+// ─────────────────────────────────────────────
+// AWAY MODE – "Someone's Home" Light Simulation
+// ─────────────────────────────────────────────
+
+// ---------- DEVICES ----------
+KITCHEN      = [kitchen_lights]
+LIVING_ROOM  = [living_1, living_2, living_3]
+HALLWAY      = [hall_light]
+OFFICE       = [office_1, office_2, office_3]
+BEDROOM_1    = [bed1_light]
+BEDROOM_2    = [bed2_1, bed2_2, bed2_3]
+
+// ---------- SETTINGS ----------
+AWAY_MODE    = TRUE          // master switch; every applet checks this first
+JITTER       = random(-10, +10) minutes   // new value each day, applied to each step
+
+FUNCTION run_step(time, action):
+    WAIT UNTIL time + JITTER
+    IF AWAY_MODE == FALSE: EXIT
+    DO action
+
+
+// ═════════════ EVENING ROUTINE ═════════════
+// Starts at sunset so it tracks the seasons automatically.
+
+TRIGGER: Sunset
+
+run_step(sunset + 0:00,  TURN ON  KITCHEN)                    // getting home, starting dinner
+run_step(sunset + 0:20,  TURN ON  LIVING_ROOM[1])             // one lamp on while cooking
+run_step(sunset + 1:00,  TURN ON  LIVING_ROOM[2], LIVING_ROOM[3])
+run_step(sunset + 1:05,  TURN OFF KITCHEN)                    // dinner done, move to couch
+
+run_step(20:30,          TURN ON  HALLWAY)                    // walking to the office
+run_step(20:32,          TURN ON  OFFICE[1], OFFICE[2])
+run_step(20:34,          TURN OFF HALLWAY)
+run_step(20:45,          TURN ON  OFFICE[3])                  // desk lamp
+run_step(20:50,          TURN OFF LIVING_ROOM[2], LIVING_ROOM[3])   // leave one lamp on
+
+run_step(21:15,          TURN ON  KITCHEN)                    // quick snack trip
+run_step(21:25,          TURN OFF KITCHEN)
+
+run_step(22:00,          TURN OFF OFFICE[3])
+run_step(22:05,          TURN OFF OFFICE[1], OFFICE[2])
+run_step(22:05,          TURN ON  HALLWAY)                    // heading to bedrooms
+run_step(22:07,          TURN ON  BEDROOM_2[1], BEDROOM_2[2], BEDROOM_2[3])
+run_step(22:08,          TURN ON  BEDROOM_1)
+run_step(22:10,          TURN OFF LIVING_ROOM[1])             // last living room lamp
+run_step(22:15,          TURN OFF HALLWAY)
+
+run_step(22:40,          TURN OFF BEDROOM_2[2], BEDROOM_2[3]) // down to a reading light
+run_step(23:00,          TURN OFF BEDROOM_1)
+run_step(23:20,          TURN OFF BEDROOM_2[1])               // lights out
+
+
+// ═════════════ MORNING ROUTINE ═════════════
+// Reverse flow: bedrooms → hallway → kitchen
+
+TRIGGER: Every day at 06:45   (skip if after sunrise)
+
+run_step(06:45,          TURN ON  BEDROOM_2[1])
+run_step(06:50,          TURN ON  HALLWAY)
+run_step(06:52,          TURN ON  KITCHEN)
+run_step(06:55,          TURN OFF HALLWAY)
+run_step(07:00,          TURN OFF BEDROOM_2[1])
+run_step(07:30,          TURN OFF KITCHEN)
+
+
+// ═════════════ OPTIONAL VARIATION ═════════════
+// Once or twice a week, simulate a late night or skip the office.
+
+IF random(1, 7) == 1:
+    shift all steps after 22:00 by +45 minutes
+IF random(1, 7) == 2:
+    skip OFFICE steps; keep LIVING_ROOM on until 22:10 instead
